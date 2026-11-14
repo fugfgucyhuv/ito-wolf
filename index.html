@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ITO人狼</title>
+<style>
+:root{--bg:#eef0f6;--sf:#fff;--ink:#1c2340;--mut:#6b7392;--ac:#2f5bea;--acx:#fff;--wf:#d6336c;--ok:#1f9d6a;--bd:#d5d9e8;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151f;--sf:#1c2133;--ink:#e8ebf7;--mut:#99a1c2;--ac:#7592ff;--acx:#0d1020;--wf:#ff6b9a;--ok:#4fd6a0;--bd:#2c3350;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12151f;--sf:#1c2133;--ink:#e8ebf7;--mut:#99a1c2;--ac:#7592ff;--acx:#0d1020;--wf:#ff6b9a;--ok:#4fd6a0;--bd:#2c3350;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",Meiryo,system-ui,sans-serif}
+main{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:32px;font-weight:900;margin:8px 0 4px}
+.mut{color:var(--mut);font-size:14px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin:12px 0}
+.btn{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:var(--ac);color:var(--acx);font:inherit;font-weight:700;margin-top:10px}
+.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--bd)}
+button:disabled{opacity:.4}
+input{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin-top:6px}
+.num{border-radius:22px;padding:18px;text-align:center;background:var(--ac);color:var(--acx);margin:12px 0}
+.num.wolf{background:var(--wf);color:#fff}
+.num .n{font-size:84px;font-weight:900;line-height:1.1}
+.num .l{font-weight:800;letter-spacing:.1em}
+.num .s{font-size:13px;opacity:.9}
+.tp{font-size:22px;font-weight:800}
+ul{list-style:none;margin:0;padding:0}
+li.p{padding:8px 0;border-top:1px solid var(--bd)}
+li.p:first-child{border-top:0}
+.ord{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}
+.ord:first-child{border-top:0}
+.pos{width:28px;height:28px;border-radius:50%;background:var(--bd);display:grid;place-items:center;font-weight:800;flex:none}
+.gr{flex:1;min-width:0;word-break:break-word}
+.rn{font-size:26px;font-weight:900;flex:none}
+.mv{flex:none}
+.mv button{width:40px;height:40px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:var(--ink);font-size:18px;margin-left:6px}
+.tag{font-size:12px;background:var(--bd);border-radius:6px;padding:1px 6px;margin-left:4px}
+.bad{color:var(--wf)}
+.good{color:var(--ok)}
+.big{font-weight:900;font-size:22px}
+.vts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.vt{padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:var(--ink);font:inherit}
+.vt.on{background:var(--wf);color:#fff;border-color:var(--wf)}
+.top{display:flex;justify-content:space-between;align-items:center}
+.sm{padding:6px 12px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--ink);font:inherit}
+.code{font-size:30px;font-weight:900;letter-spacing:.2em}
+details{margin:12px 0}
+.qr{background:#fff;padding:8px;border-radius:10px;max-width:220px;margin:8px auto}
+.qr svg{display:block;width:100%;height:auto}
+.url{word-break:break-all;user-select:all;font-size:13px;color:var(--mut)}
+summary{font-weight:700}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ▼ ここにFirebaseの設定（firebaseConfig）を貼り付ける。databaseURLも必須 ▼ */
+window.FIREBASE_CONFIG={
+  databaseURL:"https://word-wolf-70534-default-rtdb.firebaseio.com",
+  projectId:"word-wolf-70534"
+};
+/* ▲ ここまで ▲ */
+</script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),app=$("#app");
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TOPICS=["無人島に持っていきたい度","アトラクションの怖さ","食べ物の辛さ","動物の強さ","映画の面白さ","旅行先の行ってみたさ","仕事のやりたくなさ","朝起きるのがつらい度","お金持ちっぽさ","生き物のかわいさ","もらってうれしいプレゼント","スポーツのきつさ","街で出会いたくない度","家にあると便利な度","ヒーローの強さ","ご褒美感","緊張する場面","ありがたみ","大人っぽさ","非日常感"];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+let R,room=null,code="",name="",err="",hadHost=false,dirty=false,joinAt=0;
+const SITE=location.href.split("#")[0];
+const hc0=(location.hash||"").slice(1).toUpperCase(),hc=/^[A-Z0-9]{4}$/.test(hc0)?hc0:"";
+try{name=localStorage.getItem("ito-name")||""}catch(e){}
+const makeFB=()=>{
+  const C=window.FIREBASE_CONFIG;
+  if(!window.firebase||!C||!C.databaseURL||/YOUR/.test(C.databaseURL))return null;
+  try{firebase.initializeApp(C)}catch(e){return null}
+  const db=firebase.database(),id=Math.random().toString(36).slice(2,10);
+  return{join:async code=>{
+    const ref=db.ref("rooms/"+code),mine=ref.child(id),conn=db.ref(".info/connected"),subs=[];
+    let pres={},peers=[];
+    const cb=s=>{const v=s.val()||{};peers=Object.keys(v).map(k=>({peer:k,isMe:k===id,sameTab:k===id,presence:v[k]||{}}));subs.forEach(f=>f())};
+    const cc=s=>{if(s.val()===true){mine.onDisconnect().remove();if(Object.keys(pres).length)mine.set(pres).catch(()=>{})}};
+    ref.on("value",cb);conn.on("value",cc);
+    return{
+      peers:()=>peers,
+      onPeers:f=>{subs.push(f);return()=>{}},
+      presence:p=>{pres={...pres};for(const k in p){if(p[k]===null)delete pres[k];else pres[k]=p[k]}return mine.update(p).catch(()=>{})},
+      leave:async()=>{ref.off("value",cb);conn.off("value",cc);subs.length=0;pres={};await mine.remove().catch(()=>{})}
+    };
+  }};
+};
+R=makeFB();
+
+const P=()=>room?room.peers():[];
+const me=()=>P().find(p=>p.isMe&&p.sameTab);
+const nm=p=>p&&p.presence&&p.presence.nm?String(p.presence.nm).slice(0,12):"（退出）";
+const hostP=()=>{let h=null;for(const p of P()){const g=p.presence.g;if(g&&g.rc===code&&(!h||g.t0<h.presence.g.t0))h=p}return h};
+const G=()=>{const h=hostP();return h?h.presence.g:null};
+const lobbyPeers=()=>P().filter(p=>p.presence.rc===code&&p.presence.nm);
+const byId=id=>P().find(p=>p.peer===id);
+const ok=(p,g)=>!!p&&p.presence.r===g.rd;
+const validO=(o,n)=>Array.isArray(o)&&o.length===n&&new Set(o).size===n&&o.every(x=>Number.isInteger(x)&&x>=0&&x<n);
+function best(g){let b=null;for(const p of P()){const o=p.presence.o;if(ok(p,g)&&validO(o,g.pl.length)&&Number.isFinite(p.presence.ot)&&(!b||p.presence.ot>b.ot||(p.presence.ot===b.ot&&p.peer>b.peer)))b={ot:p.presence.ot,peer:p.peer,o}}return b}
+const order=g=>{const b=best(g);return b?b.o:g.pl.map((_,i)=>i)};
+const upd=patch=>{const g=G();if(g)room.presence({g:{...g,...patch}})};
+const save=()=>{try{localStorage.setItem("ito-name",name)}catch(e){}};
+const blur=()=>{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()};
+
+async function enter(){
+  try{room=await R.join(code)}catch(e){err="部屋に入れませんでした（"+(e&&e.code||"error")+"）";room=null;return render()}
+  room.onPeers(()=>render());
+  room.presence({nm:name,rc:code});
+  joinAt=Date.now();hadHost=false;err="";
+  setTimeout(render,4200);render();
+}
+const A={
+  async create(){blur();if(!R){err="Firebaseの設定が未入力です。index.htmlのFIREBASE_CONFIGを設定してください。";return render()}
+    name=($("#nm").value.trim()||"ホスト").slice(0,12);save();
+    const cs="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";code=Array.from({length:4},()=>cs[Math.floor(Math.random()*cs.length)]).join("");
+    await enter();if(room)room.presence({g:{rc:code,t0:Date.now(),rd:0,ph:"lobby",tp:pick(TOPICS)}})},
+  async join(){blur();if(!R){err="Firebaseの設定が未入力です。index.htmlのFIREBASE_CONFIGを設定してください。";return render()}
+    name=($("#nm").value.trim()||"ゲスト").slice(0,12);save();
+    code=$("#cd").value.trim().toUpperCase();
+    if(!/^[A-Z0-9]{4}$/.test(code)){err="部屋コードは4文字です。";return render()}
+    await enter()},
+  async leave(){try{await room.leave()}catch(e){}room=null;code="";hadHost=false;err="";render()},
+  retopic(){upd({tp:pick(TOPICS)})},
+  copy(){const u=SITE+"#"+code,b=document.querySelector('[data-a="copy"]'),done=t=>{if(b)b.textContent=t};
+    try{navigator.clipboard.writeText(u).then(()=>done("コピーしました"),()=>done("下のURLを長押ししてコピーしてください"))}catch(e){done("下のURLを長押ししてコピーしてください")}},
+  settopic(){const v=$("#tp").value.trim().slice(0,40);blur();if(v)upd({tp:v})},
+  start(){const g=G(),ps=lobbyPeers();if(ps.length<3)return;
+    const pl=shuf(ps.map(p=>p.peer)),nu=shuf(Array.from({length:100},(_,i)=>i+1)).slice(0,pl.length);
+    upd({ph:"hint",rd:g.rd+1,pl,nu,wo:Math.floor(Math.random()*pl.length),fo:null})},
+  hint(){const g=G(),v=$("#ht").value.trim().slice(0,40);blur();if(v)room.presence({ht:v,r:g.rd})},
+  toorder(){upd({ph:"order"})},
+  mv(v){const g=G(),o=[...order(g)],[k,d]=v.split(",").map(Number),j=k+d;if(j<0||j>=o.length)return;
+    [o[k],o[j]]=[o[j],o[k]];const b=best(g);room.presence({o,ot:(b?b.ot:0)+1,r:g.rd})},
+  reveal(){const g=G();upd({ph:"reveal",fo:order(g)})},
+  vote(v){const g=G();room.presence({vt:+v,r:g.rd})},
+  result(){upd({ph:"result"})},
+  next(){upd({ph:"lobby",tp:pick(TOPICS),pl:null,nu:null,wo:null,fo:null})}
+};
+app.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=A[b.dataset.a];if(f)f(b.dataset.v)});
+document.addEventListener("focusout",()=>{if(dirty)setTimeout(render,400)});
+
+const card=h=>`<div class="card">${h}</div>`;
+function shareCard(){
+  const u=SITE+"#"+code;let s="";
+  try{if(typeof qrcode==="function"){const q=qrcode(0,"M");q.addData(u);q.make();s=q.createSvgTag(5,2)}}catch(e){}
+  return card(`<b>友達を招待</b><p class="mut">QRコードをGoogleレンズやカメラで読み取ると、この部屋のコードが入力された状態でページが開きます。</p>${s?`<div class="qr">${s}</div>`:""}<div class="url">${esc(u)}</div><button class="btn sec" data-a="copy">リンクをコピー</button>`);
+}
+function home(){
+  return `<h1>ITO人狼</h1><p class="mut">数字に合う例えを言って、小さい順に並べよう。ただし1人だけ、わざと邪魔する人狼がいる。</p>
+  ${card(`<label class="mut">ニックネーム</label><input id="nm" maxlength="12" value="${esc(name)}" placeholder="例：たろう">`)}
+  ${card(`<button class="btn" data-a="create">部屋をつくる</button>
+  <p class="mut" style="text-align:center;margin:12px 0 0">または友達の部屋コードで</p>
+  <input id="cd" maxlength="4" value="${esc(hc)}" placeholder="部屋コード（4文字）" autocapitalize="characters" autocomplete="off">
+  <button class="btn sec" data-a="join">入る</button>`)}
+  ${err?`<p class="bad">${esc(err)}</p>`:""}
+  <details class="card"><summary>ルール</summary>
+  <p>全員に1〜100の数字が配られ、1人だけ秘密の人狼になります。お題に合う例えを言い、数字を言わずに話し合って小さい順に並べます。人狼もちゃんと数字を持っていますが、数字を想像しにくい例えでわざと順番を崩します。</p>
+  <p>並べ終えたらカードをめくり、順番が合っていれば村人の勝ち。失敗したら議論して投票し、最多得票が人狼なら村人の勝ち、外したら人狼の勝ちです。通話は別アプリで繋いでください。</p></details>`;
+}
+function rows(g,o,showNum,showWolf){
+  const nums=showNum?o.map(i=>g.nu[i]):[];
+  return `<ul>${o.map((i,k)=>{const p=byId(g.pl[i]);const bad=showNum&&k>0&&nums[k]<nums[k-1];const t=ok(p,g)?p.presence.ht:"（未入力）";
+    return `<li class="ord"><span class="pos">${k+1}</span><div class="gr"><b>${esc(nm(p))}</b>${showWolf&&g.wo===i?" 🐺":""}<div>${esc(t)}</div></div>${showNum?`<span class="rn ${bad?"bad":""}">${nums[k]}</span>`:""}${showNum?"":`<span class="mv"><button data-a="mv" data-v="${k},-1" ${k===0?"disabled":""}>↑</button><button data-a="mv" data-v="${k},1" ${k===o.length-1?"disabled":""}>↓</button></span>`}</li>`}).join("")}</ul>`;
+}
+function game(){
+  const hp=hostP(),g=hp&&hp.presence.g,top=`<div class="top"><span class="mut">部屋コード</span><button class="sm" data-a="leave">退出</button></div><div class="code">${esc(code)}</div>`;
+  if(!g){
+    if(hadHost)return top+card("ホストが退出したため、ゲームを終了しました。");
+    return top+card(Date.now()-joinAt<4000?"部屋を探しています…":"部屋が見つかりません。コードを確認して、退出してからもう一度入ってください。");
+  }
+  hadHost=true;
+  const isHost=hp.isMe,mp=me(),pl=g.pl||[],idx=mp?pl.indexOf(mp.peer):-1,hostBtn=(a,t,dis)=>isHost?`<button class="btn" data-a="${a}" ${dis?"disabled":""}>${t}</button>`:`<p class="mut">ホストの操作を待っています…</p>`;
+  const tpc=card(`<div class="mut">お題</div><div class="tp">${esc(g.tp)}</div>`);
+  if(g.ph==="lobby"){
+    const ps=lobbyPeers();
+    return top+tpc+card(`<div class="mut">参加者 ${ps.length}人（3人から開始）</div><ul>${ps.map(p=>`<li class="p">${esc(nm(p))}${p.peer===hp.peer?'<span class="tag">ホスト</span>':""}${p.isMe?'<span class="tag">あなた</span>':""}</li>`).join("")}</ul>`)
+      +shareCard()+(isHost?card(`<input id="tp" maxlength="40" placeholder="お題を自分で入力"><button class="btn sec" data-a="settopic">このお題にする</button><button class="btn sec" data-a="retopic">お題をランダムに変える</button>`)+hostBtn("start","ゲームを始める",ps.length<3):`<p class="mut">ホストの開始を待っています…</p>`);
+  }
+  const role=idx<0?card("途中参加のため、今回は観戦です。"):`<div class="num ${g.wo===idx?"wolf":""}"><div class="l">${g.wo===idx?"人狼":"村人"}</div><div class="n">${g.nu[idx]}</div><div class="s">${g.wo===idx?"数字を想像しにくい例えで、バレないように順番を崩そう":"数字に合う例えを言って、人狼を見破ろう"}</div></div>`;
+  if(g.ph==="hint"){
+    const myT=mp&&ok(mp,g)?mp.presence.ht||"":"";
+    return top+role+tpc+(idx>=0?card(`<label class="mut">あなたの例え</label><input id="ht" maxlength="40" value="${esc(myT)}" placeholder="数字を言わずに例えよう"><button class="btn" data-a="hint">${myT?"変更する":"決定"}</button>`):"")
+      +card(`<ul>${pl.map(id=>{const p=byId(id),t=ok(p,g)?p.presence.ht:null;return `<li class="p"><b>${esc(nm(p))}</b>：${t?esc(t):'<span class="mut">考え中…</span>'}</li>`}).join("")}</ul>`)+hostBtn("toorder","並べ替えへ進む");
+  }
+  if(g.ph==="order"){
+    return top+role+tpc+card(`<div class="mut">上＝小さい数字　下＝大きい数字。通話で相談しながら、誰でも動かせます。</div>${rows(g,order(g),false)}`)+hostBtn("reveal","カードをめくる");
+  }
+  const fo=g.fo||order(g),nums=fo.map(i=>g.nu[i]),success=nums.every((n,k)=>k===0||n>nums[k-1]);
+  if(g.ph==="reveal"){
+    const mv=mp&&ok(mp,g)&&Number.isInteger(mp.presence.vt)?mp.presence.vt:-1,voted=pl.filter(id=>{const p=byId(id);return ok(p,g)&&Number.isInteger(p.presence.vt)}).length;
+    return top+tpc+card(`<div class="big ${success?"good":"bad"}">${success?"順番は正解！":"順番が違った…"}</div>${rows(g,fo,true,false)}`)
+      +(success?card("正解でしたが、人狼は誰だったのか気になるところ。")+hostBtn("result","結果発表"):card(`<b>議論して、人狼だと思う人に投票</b><div class="vts">${pl.map((id,i)=>i===idx?"":`<button class="vt ${mv===i?"on":""}" data-a="vote" data-v="${i}">${esc(nm(byId(id)))}</button>`).join("")}</div><p class="mut">投票済み ${voted}/${pl.length}人（変更できます）</p>`)+hostBtn("result","投票を締め切る"));
+  }
+  const cnt=pl.map(()=>0);
+  pl.forEach((id,i)=>{const p=byId(id),v=p&&p.presence.vt;if(ok(p,g)&&Number.isInteger(v)&&v>=0&&v<pl.length&&v!==i)cnt[v]++});
+  const caught=cnt[g.wo]>0&&cnt.every((c,i)=>i===g.wo||c<cnt[g.wo]);
+  const vil=success||caught,why=success?"順番を揃えた":caught?"人狼を見破った":"人狼が逃げ切った";
+  return top+card(`<div class="big ${vil?"good":"bad"}">${vil?"村人の勝ち":"人狼の勝ち"}</div><div>${why}</div><p>人狼は <b>${esc(nm(byId(pl[g.wo])))}</b> 🐺（数字 ${g.nu[g.wo]}）でした。</p>`)
+    +card(`<div class="mut">お題：${esc(g.tp)}</div>${rows(g,fo,true,true)}`)
+    +card(`<b>得票</b><ul>${pl.map((id,i)=>`<li class="p">${esc(nm(byId(id)))}：${cnt[i]}票</li>`).join("")}</ul>`)+hostBtn("next","次のラウンドへ");
+}
+function render(){
+  const a=document.activeElement;
+  if(a&&/INPUT|TEXTAREA/.test(a.tagName)){dirty=true;return}
+  dirty=false;
+  app.innerHTML=room?game():home();
+}
+render();
+})();
+</script>
+</body>
+</html>
