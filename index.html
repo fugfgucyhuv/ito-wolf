@@ -106,8 +106,10 @@ const lobbyPeers=()=>P().filter(p=>p.presence.rc===code&&p.presence.nm);
 const byId=id=>P().find(p=>p.peer===id);
 const ok=(p,g)=>!!p&&p.presence.r===g.rd;
 const validO=(o,n)=>Array.isArray(o)&&o.length===n&&new Set(o).size===n&&o.every(x=>Number.isInteger(x)&&x>=0&&x<n);
-function best(g){let b=null;for(const p of P()){const o=p.presence.o;if(ok(p,g)&&validO(o,g.pl.length)&&Number.isFinite(p.presence.ot)&&(!b||p.presence.ot>b.ot||(p.presence.ot===b.ot&&p.peer>b.peer)))b={ot:p.presence.ot,peer:p.peer,o}}return b}
-const order=g=>{const b=best(g);return b?b.o:g.pl.map((_,i)=>i)};
+const KC=g=>g.kc||1,CN=g=>g.pl.length*KC(g);
+const hintsOf=(p,g)=>{const h=p&&ok(p,g)?p.presence.ht:null;return Array.isArray(h)&&h.length===KC(g)?h:null};
+function best(g){let b=null;for(const p of P()){const o=p.presence.o;if(ok(p,g)&&validO(o,CN(g))&&Number.isFinite(p.presence.ot)&&(!b||p.presence.ot>b.ot||(p.presence.ot===b.ot&&p.peer>b.peer)))b={ot:p.presence.ot,peer:p.peer,o}}return b}
+const order=g=>{const b=best(g);return b?b.o:Array.from({length:CN(g)},(_,i)=>i)};
 const upd=patch=>{const g=G();if(g)room.presence({g:{...g,...patch}})};
 const save=()=>{try{localStorage.setItem("ito-name",name)}catch(e){}};
 const blur=()=>{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()};
@@ -131,13 +133,15 @@ const A={
     await enter()},
   async leave(){try{await room.leave()}catch(e){}room=null;code="";hadHost=false;err="";render()},
   retopic(){upd({tp:pick(TOPICS)})},
+  kup(){const g=G();upd({kc:Math.min(3,KC(g)+1)})},
+  kdn(){const g=G();upd({kc:Math.max(1,KC(g)-1)})},
   copy(){const u=SITE+"#"+code,b=document.querySelector('[data-a="copy"]'),done=t=>{if(b)b.textContent=t};
     try{navigator.clipboard.writeText(u).then(()=>done("コピーしました"),()=>done("下のURLを長押ししてコピーしてください"))}catch(e){done("下のURLを長押ししてコピーしてください")}},
   settopic(){const v=$("#tp").value.trim().slice(0,40);blur();if(v)upd({tp:v})},
-  start(){const g=G(),ps=lobbyPeers();if(ps.length<3)return;
-    const pl=shuf(ps.map(p=>p.peer)),nu=shuf(Array.from({length:100},(_,i)=>i+1)).slice(0,pl.length);
+  start(){const g=G(),ps=lobbyPeers();if(ps.length<3||ps.length*KC(g)>100)return;
+    const pl=shuf(ps.map(p=>p.peer)),nu=shuf(Array.from({length:100},(_,i)=>i+1)).slice(0,pl.length*KC(g));
     upd({ph:"hint",rd:g.rd+1,pl,nu,wo:Math.floor(Math.random()*pl.length),fo:null})},
-  hint(){const g=G(),v=$("#ht").value.trim().slice(0,40);blur();if(v)room.presence({ht:v,r:g.rd})},
+  hint(){const g=G(),v=Array.from({length:KC(g)},(_,j)=>($("#ht"+j).value||"").trim().slice(0,40));blur();if(v.every(Boolean))room.presence({ht:v,r:g.rd})},
   toorder(){upd({ph:"order"})},
   mv(v){const g=G(),o=[...order(g)],[k,d]=v.split(",").map(Number),j=k+d;if(j<0||j>=o.length)return;
     [o[k],o[j]]=[o[j],o[k]];const b=best(g);room.presence({o,ot:(b?b.ot:0)+1,r:g.rd})},
@@ -164,13 +168,13 @@ function home(){
   <button class="btn sec" data-a="join">入る</button>`)}
   ${err?`<p class="bad">${esc(err)}</p>`:""}
   <details class="card"><summary>ルール</summary>
-  <p>全員に1〜100の数字が配られ、1人だけ秘密の人狼になります。お題に合う例えを言い、数字を言わずに話し合って小さい順に並べます。人狼もちゃんと数字を持っていますが、数字を想像しにくい例えでわざと順番を崩します。</p>
+  <p>全員に1〜100の数字カードが配られ（枚数はホストが1〜3枚で設定）、1人だけ秘密の人狼になります。お題に合う例えを言い、数字を言わずに話し合って小さい順に並べます。人狼もちゃんと数字を持っていますが、数字を想像しにくい例えでわざと順番を崩します。</p>
   <p>並べ終えたらカードをめくり、順番が合っていれば村人の勝ち。失敗したら議論して投票し、最多得票が人狼なら村人の勝ち、外したら人狼の勝ちです。通話は別アプリで繋いでください。</p></details>`;
 }
 function rows(g,o,showNum,showWolf){
   const nums=showNum?o.map(i=>g.nu[i]):[];
-  return `<ul>${o.map((i,k)=>{const p=byId(g.pl[i]);const bad=showNum&&k>0&&nums[k]<nums[k-1];const t=ok(p,g)?p.presence.ht:"（未入力）";
-    return `<li class="ord"><span class="pos">${k+1}</span><div class="gr"><b>${esc(nm(p))}</b>${showWolf&&g.wo===i?" 🐺":""}<div>${esc(t)}</div></div>${showNum?`<span class="rn ${bad?"bad":""}">${nums[k]}</span>`:""}${showNum?"":`<span class="mv"><button data-a="mv" data-v="${k},-1" ${k===0?"disabled":""}>↑</button><button data-a="mv" data-v="${k},1" ${k===o.length-1?"disabled":""}>↓</button></span>`}</li>`}).join("")}</ul>`;
+  return `<ul>${o.map((i,k)=>{const K=KC(g),pi=Math.floor(i/K),sl=i%K,p=byId(g.pl[pi]),bad=showNum&&k>0&&nums[k]<nums[k-1],hs=hintsOf(p,g),t=hs?hs[sl]:"（未入力）";
+    return `<li class="ord"><span class="pos">${k+1}</span><div class="gr"><b>${esc(nm(p))}</b>${K>1?` のカード${sl+1}`:""}${showWolf&&g.wo===pi?" 🐺":""}<div>${esc(t)}</div></div>${showNum?`<span class="rn ${bad?"bad":""}">${nums[k]}</span>`:""}${showNum?"":`<span class="mv"><button data-a="mv" data-v="${k},-1" ${k===0?"disabled":""}>↑</button><button data-a="mv" data-v="${k},1" ${k===o.length-1?"disabled":""}>↓</button></span>`}</li>`}).join("")}</ul>`;
 }
 function game(){
   const hp=hostP(),g=hp&&hp.presence.g,top=`<div class="top"><span class="mut">部屋コード</span><button class="sm" data-a="leave">退出</button></div><div class="code">${esc(code)}</div>`;
@@ -184,13 +188,13 @@ function game(){
   if(g.ph==="lobby"){
     const ps=lobbyPeers();
     return top+tpc+card(`<div class="mut">参加者 ${ps.length}人（3人から開始）</div><ul>${ps.map(p=>`<li class="p">${esc(nm(p))}${p.peer===hp.peer?'<span class="tag">ホスト</span>':""}${p.isMe?'<span class="tag">あなた</span>':""}</li>`).join("")}</ul>`)
-      +shareCard()+(isHost?card(`<input id="tp" maxlength="40" placeholder="お題を自分で入力"><button class="btn sec" data-a="settopic">このお題にする</button><button class="btn sec" data-a="retopic">お題をランダムに変える</button>`)+hostBtn("start","ゲームを始める",ps.length<3):`<p class="mut">ホストの開始を待っています…</p>`);
+      +card(`<div class="mut">1人あたりのカード枚数</div>${isHost?`<button class="sm" data-a="kdn">−</button> <b class="big">${KC(g)}</b> <button class="sm" data-a="kup">＋</button>`:`<b class="big">${KC(g)}</b>`}`)+shareCard()+(isHost?card(`<input id="tp" maxlength="40" placeholder="お題を自分で入力"><button class="btn sec" data-a="settopic">このお題にする</button><button class="btn sec" data-a="retopic">お題をランダムに変える</button>`)+hostBtn("start","ゲームを始める",ps.length<3):`<p class="mut">ホストの開始を待っています…</p>`);
   }
-  const role=idx<0?card("途中参加のため、今回は観戦です。"):`<div class="num ${g.wo===idx?"wolf":""}"><div class="l">${g.wo===idx?"人狼":"村人"}</div><div class="n">${g.nu[idx]}</div><div class="s">${g.wo===idx?"数字を想像しにくい例えで、バレないように順番を崩そう":"数字に合う例えを言って、人狼を見破ろう"}</div></div>`;
+  const role=idx<0?card("途中参加のため、今回は観戦です。"):`<div class="num ${g.wo===idx?"wolf":""}"><div class="l">${g.wo===idx?"人狼":"村人"}</div><div class="n" style="font-size:${[0,84,60,44][KC(g)]}px">${g.nu.slice(idx*KC(g),idx*KC(g)+KC(g)).join("　")}</div><div class="s">${g.wo===idx?"数字を想像しにくい例えで、バレないように順番を崩そう":"数字に合う例えを言って、人狼を見破ろう"}</div></div>`;
   if(g.ph==="hint"){
-    const myT=mp&&ok(mp,g)?mp.presence.ht||"":"";
-    return top+role+tpc+(idx>=0?card(`<label class="mut">あなたの例え</label><input id="ht" maxlength="40" value="${esc(myT)}" placeholder="数字を言わずに例えよう"><button class="btn" data-a="hint">${myT?"変更する":"決定"}</button>`):"")
-      +card(`<ul>${pl.map(id=>{const p=byId(id),t=ok(p,g)?p.presence.ht:null;return `<li class="p"><b>${esc(nm(p))}</b>：${t?esc(t):'<span class="mut">考え中…</span>'}</li>`}).join("")}</ul>`)+hostBtn("toorder","並べ替えへ進む");
+    const hm=hintsOf(mp,g),myT=hm||[],K=KC(g),mine=g.nu.slice(idx*K,idx*K+K);
+    return top+role+tpc+(idx>=0?card(`${mine.map((n,j)=>`<label class="mut">${K>1?`カード${j+1}（${n}）の`:""}あなたの例え</label><input id="ht${j}" maxlength="40" value="${esc(myT[j]||"")}" placeholder="数字を言わずに例えよう">`).join("")}<button class="btn" data-a="hint">${hm?"変更する":"決定"}</button>`):"")
+      +card(`<ul>${pl.map(id=>{const p=byId(id),t=hintsOf(p,g);return `<li class="p"><b>${esc(nm(p))}</b>：${t?esc(t.join(" / ")):'<span class="mut">考え中…</span>'}</li>`}).join("")}</ul>`)+hostBtn("toorder","並べ替えへ進む");
   }
   if(g.ph==="order"){
     return top+role+tpc+card(`<div class="mut">上＝小さい数字　下＝大きい数字。通話で相談しながら、誰でも動かせます。</div>${rows(g,order(g),false)}`)+hostBtn("reveal","カードをめくる");
@@ -205,7 +209,7 @@ function game(){
   pl.forEach((id,i)=>{const p=byId(id),v=p&&p.presence.vt;if(ok(p,g)&&Number.isInteger(v)&&v>=0&&v<pl.length&&v!==i)cnt[v]++});
   const caught=cnt[g.wo]>0&&cnt.every((c,i)=>i===g.wo||c<cnt[g.wo]);
   const vil=success||caught,why=success?"順番を揃えた":caught?"人狼を見破った":"人狼が逃げ切った";
-  return top+card(`<div class="big ${vil?"good":"bad"}">${vil?"村人の勝ち":"人狼の勝ち"}</div><div>${why}</div><p>人狼は <b>${esc(nm(byId(pl[g.wo])))}</b> 🐺（数字 ${g.nu[g.wo]}）でした。</p>`)
+  return top+card(`<div class="big ${vil?"good":"bad"}">${vil?"村人の勝ち":"人狼の勝ち"}</div><div>${why}</div><p>人狼は <b>${esc(nm(byId(pl[g.wo])))}</b> 🐺（数字 ${g.nu.slice(g.wo*KC(g),g.wo*KC(g)+KC(g)).join("・")}）でした。</p>`)
     +card(`<div class="mut">お題：${esc(g.tp)}</div>${rows(g,fo,true,true)}`)
     +card(`<b>得票</b><ul>${pl.map((id,i)=>`<li class="p">${esc(nm(byId(id)))}：${cnt[i]}票</li>`).join("")}</ul>`)+hostBtn("next","次のラウンドへ");
 }
