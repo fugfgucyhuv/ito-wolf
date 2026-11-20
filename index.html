@@ -196,7 +196,7 @@ function pickAv(file){
 const card=h=>`<div class="card">${h}</div>`;
 function shareCard(){
   const u=SITE+"#"+code;let s="";
-  try{if(typeof qrcode==="function"){const q=qrcode(0,"M");q.addData(u);q.make();s=q.createSvgTag(5,2)}}catch(e){}
+  try{if(typeof qrcode==="function"){const q=qrcode(0,"M");q.addData(u);q.make();s=q.createSvgTag(5,4)}}catch(e){}
   return card(`<b>友達を招待</b><p class="mut">QRコードをGoogleレンズやカメラで読み取ると、この部屋のコードが入力された状態でページが開きます。</p>${s?`<div class="qr">${s}</div>`:""}<div class="url">${esc(u)}</div><button class="btn sec" data-a="copy">リンクをコピー</button>`);
 }
 function home(){
@@ -244,7 +244,7 @@ function game(){
   if(g.ph==="reveal"){
     const mv=mp&&ok(mp,g)&&Number.isInteger(mp.presence.vt)?mp.presence.vt:-1,voted=pl.filter(id=>{const p=byId(id);return ok(p,g)&&Number.isInteger(p.presence.vt)}).length;
     return top+tpc+card(`<div class="big ${success?"good":"bad"}">${success?"順番は正解！":"順番が違った…"}</div>${rows(g,fo,true,false)}`)
-      +(success?card("正解でしたが、人狼は誰だったのか気になるところ。")+hostBtn("result","結果発表"):card(`<b>議論して、人狼だと思う人に投票</b><div class="vts">${pl.map((id,i)=>i===idx?"":`<button class="vt ${mv===i?"on":""}" data-a="vote" data-v="${i}">${ava(byId(id))}${nh(byId(id))}</button>`).join("")}</div><p class="mut">投票済み ${voted}/${pl.length}人（変更できます）</p>`)+hostBtn("result","投票を締め切る"));
+      +(success?card("正解でしたが、人狼は誰だったのか")+hostBtn("result","結果発表"):card(`<b>議論して、人狼に投票</b><div class="vts">${pl.map((id,i)=>i===idx?"":`<button class="vt ${mv===i?"on":""}" data-a="vote" data-v="${i}">${ava(byId(id))}${nh(byId(id))}</button>`).join("")}</div><p class="mut">投票済み ${voted}/${pl.length}人（変更できます）</p>`)+hostBtn("result","投票を締め切る"));
   }
   const cnt=pl.map(()=>0);
   pl.forEach((id,i)=>{const p=byId(id),v=p&&p.presence.vt;if(ok(p,g)&&Number.isInteger(v)&&v>=0&&v<pl.length&&v!==i)cnt[v]++});
